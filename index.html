@@ -838,9 +838,17 @@ render();
 (async function(){try{A=await claude.use("assets");if(openId)drawModal()}catch(e){}})();
 (async function(){try{MC=await claude.use("mcp");render()}catch(e){}})();
 
+var FBURL="https://calendario-editorial-97a5d-default-rtdb.firebaseio.com/board/main.json";
+var FBDB={doc:function(){return{
+  set:function(v){return fetch(FBURL,{method:"PUT",body:JSON.stringify(v)}).then(function(r){if(!r.ok)throw r})},
+  onSnapshot:function(cb,err){
+    function pull(){fetch(FBURL).then(function(r){if(!r.ok)throw r;return r.json()}).then(function(d){cb({metadata:{hasPendingWrites:false},exists:!!(d&&d.state),data:function(){return d}})}).catch(function(){err&&err()})}
+    pull();
+    try{var es=new EventSource(FBURL);var t;es.addEventListener("put",function(){clearTimeout(t);t=setTimeout(pull,150)});es.addEventListener("patch",function(){clearTimeout(t);t=setTimeout(pull,150)});es.onerror=function(){}}catch(e){setInterval(pull,5000)}
+  }}}};
 (async function(){
   try{
-    var db=await claude.use("db");if(!db)return;
+    var db=STANDALONE?FBDB:await claude.use("db");if(!db)return;
     dbDoc=db.doc("board/main");$("#sync").textContent="conectando…";
     dbDoc.onSnapshot(function(s){
       if(s.metadata.hasPendingWrites)return;
